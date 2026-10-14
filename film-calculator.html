@@ -1,0 +1,723 @@
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>Film Cost Calculator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Noto+Serif+SC:wght@500;600&display=swap">
+<style>
+/* Layout: a quiet instrument panel. Masthead, a line-drawn flow-wrap machine that reacts to the inputs,
+   then inputs on the left and a sticky results ledger on the right. Ivory, charcoal, brass. */
+:root {
+  --bg: #F7F4EE;
+  --surface: #FBF9F5;
+  --ink: #2B2B2B;
+  --ink2: #5C584F;
+  --muted: #7C776B;
+  --line: #D9D3C7;
+  --line2: #E8E3D8;
+  --dot: rgba(43, 43, 43, .08);
+  --brass: #B08D57;
+  --brass-ink: #7C5E2C;
+  --film: rgba(176, 141, 87, .13);
+  --cta-bg: #2B2B2B;
+  --cta-ink: #F7F4EE;
+  --cta-sub: #C9C2B3;
+  --btn-bg: #B08D57;
+  --btn-ink: #1B1A18;
+  --focus: #7C5E2C;
+  --f-display: "Cormorant Garamond", "Noto Serif SC", "Songti SC", "Noto Serif CJK SC", serif;
+  --f-body: "IBM Plex Sans", "PingFang SC", "Microsoft YaHei", "Noto Sans SC", system-ui, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #151412;
+    --surface: #1B1A18;
+    --ink: #EDE8DD;
+    --ink2: #B9B3A6;
+    --muted: #948E80;
+    --line: #34322D;
+    --line2: #272521;
+    --dot: rgba(237, 232, 221, .07);
+    --brass: #CDAE76;
+    --brass-ink: #D7BC8A;
+    --film: rgba(205, 174, 118, .12);
+    --cta-bg: #201E1B;
+    --cta-ink: #EDE8DD;
+    --cta-sub: #A8A295;
+    --btn-bg: #CDAE76;
+    --btn-ink: #1B1A18;
+    --focus: #D7BC8A;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #151412;
+  --surface: #1B1A18;
+  --ink: #EDE8DD;
+  --ink2: #B9B3A6;
+  --muted: #948E80;
+  --line: #34322D;
+  --line2: #272521;
+  --dot: rgba(237, 232, 221, .07);
+  --brass: #CDAE76;
+  --brass-ink: #D7BC8A;
+  --film: rgba(205, 174, 118, .12);
+  --cta-bg: #201E1B;
+  --cta-ink: #EDE8DD;
+  --cta-sub: #A8A295;
+  --btn-bg: #CDAE76;
+  --btn-ink: #1B1A18;
+  --focus: #D7BC8A;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--f-body);
+  font-size: 16px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+.wrap {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+button, input, select { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+/* masthead */
+.mast { border-bottom: 1px solid var(--line); }
+.mast .wrap { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-block: 14px; }
+.eyebrow { font-family: var(--f-mono); font-size: .72rem; letter-spacing: .16em; color: var(--brass-ink); }
+.lang { display: inline-flex; border: 1px solid var(--line); border-radius: 2px; }
+.lang button {
+  background: transparent; border: 0; padding: 5px 13px; cursor: pointer;
+  font-size: .8rem; letter-spacing: .04em; color: var(--muted);
+}
+.lang button + button { border-left: 1px solid var(--line); }
+.lang button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+
+.intro { padding-block: 44px 28px; }
+h1 {
+  font-family: var(--f-display); font-weight: 500; letter-spacing: -.005em;
+  font-size: clamp(2rem, 4.6vw, 3.1rem); line-height: 1.12; margin: 0 0 14px; text-wrap: balance;
+}
+.lead { margin: 0; max-width: 62ch; color: var(--ink2); font-size: 1.04rem; }
+
+/* machine stage */
+.stage { border: 1px solid var(--line); background: var(--surface); border-radius: 3px; }
+.stage-art {
+  overflow-x: auto;
+  background-image: radial-gradient(var(--dot) 1px, transparent 1px);
+  background-size: 18px 18px;
+  border-bottom: 1px solid var(--line);
+}
+#machine { display: block; width: 100%; min-width: 640px; height: auto; color: var(--ink2); }
+#machine .ln { fill: none; stroke: currentColor; stroke-width: 1.2; vector-effect: non-scaling-stroke; }
+#machine .thin { fill: none; stroke: currentColor; stroke-width: .8; vector-effect: non-scaling-stroke; opacity: .75; }
+#machine .film { fill: var(--film); stroke: currentColor; stroke-width: 1.2; vector-effect: non-scaling-stroke; }
+#machine .solid { fill: var(--surface); stroke: currentColor; stroke-width: 1.2; vector-effect: non-scaling-stroke; }
+#machine .brass { fill: none; stroke: var(--brass); stroke-width: 1.4; vector-effect: non-scaling-stroke; }
+#machine .brassfill { fill: var(--brass); }
+#machine .flow { stroke-dasharray: 5 6; }
+#machine .ghost { fill: none; stroke: currentColor; stroke-width: 1; stroke-dasharray: 3 3; vector-effect: non-scaling-stroke; opacity: .8; }
+#machine text { font-family: var(--f-mono); font-size: 12px; fill: var(--muted); letter-spacing: .06em; }
+#machine .dimtxt { fill: var(--brass-ink); font-weight: 500; }
+.readouts { display: grid; grid-template-columns: repeat(3, 1fr); margin: 0; }
+.readouts > div { padding: 14px 20px 16px; min-width: 0; }
+.readouts > div + div { border-left: 1px solid var(--line); }
+.readouts dt { font-size: .72rem; letter-spacing: .1em; color: var(--muted); text-transform: uppercase; margin-bottom: 2px; }
+.readouts dd { margin: 0; font-family: var(--f-mono); font-size: 1.28rem; font-variant-numeric: tabular-nums; }
+.readouts dd small { font-size: .8rem; color: var(--muted); margin-left: 4px; }
+
+/* columns */
+.cols { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, .95fr); gap: 24px; padding-block: 24px 28px; align-items: start; }
+.panel { border: 1px solid var(--line); background: var(--surface); border-radius: 3px; padding: 24px; }
+.results { position: sticky; top: 16px; }
+fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
+.grp + .grp { margin-top: 26px; padding-top: 22px; border-top: 1px solid var(--line2); }
+legend, .cap {
+  font-size: .72rem; letter-spacing: .14em; text-transform: uppercase; color: var(--brass-ink);
+  font-weight: 600; padding: 0; margin-bottom: 12px;
+}
+.row { display: grid; gap: 12px; }
+.r3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.r2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.fld { display: block; min-width: 0; }
+.lbl { display: block; font-size: .82rem; color: var(--ink2); margin-bottom: 5px; }
+.hint { display: block; font-size: .74rem; color: var(--muted); margin-top: 4px; line-height: 1.4; }
+.ctl { position: relative; display: block; }
+.ctl input, .ctl select {
+  width: 100%; background: var(--bg); border: 1px solid var(--line); border-radius: 2px;
+  padding: 9px 40px 9px 11px; font-size: 1rem; font-variant-numeric: tabular-nums; min-width: 0;
+}
+.ctl select { padding-right: 11px; appearance: none; cursor: pointer;
+  background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+  background-position: calc(100% - 17px) 55%, calc(100% - 12px) 55%; background-size: 5px 5px; background-repeat: no-repeat; }
+.ctl input:hover, .ctl select:hover { border-color: var(--muted); }
+.ctl em { position: absolute; right: 11px; top: 50%; transform: translateY(-50%); font-style: normal; font-size: .76rem; color: var(--muted); pointer-events: none; font-family: var(--f-mono); }
+.films { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.film { display: grid; gap: 12px; align-content: start; }
+.film h3 { margin: 0; font-size: .9rem; font-weight: 600; display: flex; align-items: baseline; gap: 8px; }
+.film h3 span { font-family: var(--f-mono); font-size: .78rem; color: var(--brass-ink); }
+.reset { margin-top: 22px; background: none; border: 0; padding: 0; color: var(--muted); font-size: .82rem; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.reset:hover { color: var(--ink); }
+
+/* results */
+.duo { display: grid; grid-template-columns: 1fr 1fr; }
+.res { padding: 0 0 18px; min-width: 0; }
+.res + .res { padding-left: 22px; border-left: 1px solid var(--line); }
+.res h3 { margin: 0 0 6px; font-size: .78rem; font-weight: 500; color: var(--ink2); }
+.big { margin: 0; font-family: var(--f-display); font-weight: 500; font-size: clamp(2.6rem, 6vw, 3.6rem); line-height: 1; font-variant-numeric: lining-nums tabular-nums; letter-spacing: -.01em; }
+.big small { font-family: var(--f-body); font-size: .8rem; color: var(--muted); letter-spacing: 0; margin-left: 6px; }
+.sub { margin: 6px 0 0; font-family: var(--f-mono); font-size: .8rem; color: var(--muted); }
+.tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.tbl th { font-size: .7rem; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); font-weight: 500; text-align: right; padding: 8px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.tbl th:first-child { text-align: left; }
+.tbl td { padding: 9px 0; border-bottom: 1px solid var(--line2); text-align: right; font-size: .93rem; }
+.tbl td:first-child { text-align: left; color: var(--ink2); font-size: .86rem; padding-right: 10px; }
+.tbl td.num { font-family: var(--f-mono); font-size: .88rem; }
+.verdict { margin: 18px 0 0; padding-top: 14px; border-top: 1px solid var(--ink); font-size: 1.02rem; font-weight: 500; }
+.verdict b { font-family: var(--f-display); font-size: 1.5rem; font-weight: 600; color: var(--brass-ink); }
+.note { margin: 12px 0 0; font-size: .78rem; color: var(--muted); line-height: 1.5; }
+
+/* call to action */
+.cta {
+  background: var(--cta-bg); color: var(--cta-ink); border: 1px solid var(--line); border-radius: 3px;
+  padding: 28px 28px; display: flex; align-items: center; justify-content: space-between; gap: 24px; flex-wrap: wrap;
+}
+.cta h2 { margin: 0 0 4px; font-family: var(--f-display); font-weight: 500; font-size: 1.7rem; line-height: 1.2; }
+.cta p { margin: 0; color: var(--cta-sub); max-width: 52ch; font-size: .95rem; }
+.btn {
+  display: inline-flex; align-items: center; gap: 12px; background: var(--btn-bg); color: var(--btn-ink);
+  padding: 13px 22px; border-radius: 2px; text-decoration: none; font-weight: 600; font-size: .95rem; letter-spacing: .02em;
+  transition: transform .15s ease, filter .15s ease;
+}
+.btn:hover { filter: brightness(1.06); transform: translateY(-1px); }
+.btn:focus-visible { outline-color: var(--cta-ink); }
+.foot { padding-block: 22px 40px; font-size: .78rem; color: var(--muted); line-height: 1.6; }
+.foot p { margin: 0 0 6px; max-width: 80ch; }
+
+@media (max-width: 900px) {
+  .cols { grid-template-columns: minmax(0, 1fr); }
+  .results { position: static; }
+}
+@media (max-width: 560px) {
+  .intro { padding-block: 30px 20px; }
+  .panel { padding: 18px; }
+  .r3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .films { grid-template-columns: minmax(0, 1fr); }
+  .readouts { grid-template-columns: minmax(0, 1fr); }
+  .readouts > div + div { border-left: 0; border-top: 1px solid var(--line); }
+  .cta { padding: 22px 18px; }
+  .btn { width: 100%; justify-content: center; }
+  .res + .res { padding-left: 14px; }
+}
+@media (prefers-reduced-motion: reduce) { .btn { transition: none; } }
+</style>
+
+<header class="mast">
+  <div class="wrap">
+    <span class="eyebrow">FLOW-WRAP FILM · CALCULATOR</span>
+    <div class="lang" role="group" aria-label="Language">
+      <button type="button" data-lang="zh" aria-pressed="true">中文</button>
+      <button type="button" data-lang="en" aria-pressed="false">EN</button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="intro">
+    <h1 data-i18n="title"></h1>
+    <p class="lead" data-i18n="lead"></p>
+  </section>
+
+  <section class="stage">
+    <div class="stage-art">
+      <svg id="machine" viewBox="0 0 900 256" role="img" aria-labelledby="mTitle mDesc">
+        <title id="mTitle"></title>
+        <desc id="mDesc"></desc>
+        <defs>
+          <clipPath id="cProd"><rect x="430" y="0" width="155" height="256"/></clipPath>
+          <clipPath id="cPack"><rect x="585" y="0" width="315" height="256"/></clipPath>
+          <pattern id="crimp" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+            <line x1="0" y1="0" x2="0" y2="4" stroke="currentColor" stroke-width="1" opacity=".7"/>
+          </pattern>
+        </defs>
+        <g id="ruler"></g>
+        <g id="labels">
+          <g id="lblReel"><text text-anchor="middle" x="68" y="16" data-k="mReel"></text><line class="thin" x1="68" y1="21" x2="68" y2="27"/></g>
+          <g id="lblRoll"><text text-anchor="middle" x="205" y="16" data-k="mRoll"></text><line class="thin" x1="205" y1="21" x2="205" y2="27"/></g>
+          <g id="lblForm"><text text-anchor="middle" x="380" y="16" data-k="mForm"></text><line class="thin" x1="380" y1="21" x2="380" y2="27"/></g>
+          <g id="lblTube"><text text-anchor="middle" x="507" y="16" data-k="mTube"></text><line class="thin" x1="507" y1="21" x2="507" y2="27"/></g>
+          <g id="lblSeal"><text text-anchor="middle" x="585" y="16" data-k="mSeal"></text><line class="thin" x1="585" y1="21" x2="585" y2="27"/></g>
+          <g id="lblOut"><text text-anchor="middle" x="760" y="16" data-k="mOut"></text><line class="thin" x1="760" y1="21" x2="760" y2="27"/></g>
+        </g>
+        <!-- reel -->
+        <path id="reelBody" class="solid"/>
+        <ellipse id="reelTop" class="solid" cx="68" rx="28" ry="5"/>
+        <g id="stripes"></g>
+        <line id="spT" class="ln" x1="68" x2="68"/>
+        <line id="spB" class="ln" x1="68" x2="68"/>
+        <!-- web -->
+        <rect id="web" class="film" x="96" width="234"/>
+        <line id="d1" class="thin flow" x1="100" x2="330"/>
+        <line id="d2" class="thin flow" x1="100" x2="330"/>
+        <g id="idlers">
+          <rect id="i1" class="solid" x="165" width="10" rx="4"/>
+          <rect id="i2" class="solid" x="235" width="10" rx="4"/>
+        </g>
+        <!-- former -->
+        <polygon id="former" class="film"/>
+        <line id="f1" class="thin flow"/><line id="f2" class="thin flow"/><line id="f3" class="thin flow"/>
+        <!-- tube -->
+        <rect id="tube" class="solid" x="430" width="155" rx="2" style="fill:var(--film)"/>
+        <g clip-path="url(#cProd)"><g id="prodInner"></g></g>
+        <!-- seal -->
+        <rect id="jaw" x="579" width="12" fill="url(#crimp)" stroke="var(--brass)" stroke-width="1"/>
+        <g clip-path="url(#cPack)"><g id="packInner"></g></g>
+        <line id="cut" class="brass" x1="585" x2="585" style="stroke-dasharray:4 3"/>
+        <g id="gearT"><path class="solid"/><circle r="4.5" class="solid"/></g>
+        <g id="gearB"><path class="solid"/><circle r="4.5" class="solid"/></g>
+        <!-- dimensions -->
+        <g id="dimV">
+          <line class="brass" id="dvL"/><line class="brass" id="dvT"/><line class="brass" id="dvB"/>
+          <text id="dvX" class="dimtxt" text-anchor="middle"></text>
+        </g>
+        <g id="dimH">
+          <line class="brass" id="dhL"/><line class="brass" id="dhA"/><line class="brass" id="dhB"/>
+          <text id="dhX" class="dimtxt" text-anchor="middle"></text>
+        </g>
+      </svg>
+    </div>
+    <dl class="readouts">
+      <div><dt data-i18n="roFW"></dt><dd><span id="roFW">0</span><small>mm</small></dd></div>
+      <div><dt data-i18n="roLen"></dt><dd><span id="roLen">0</span><small>mm</small></dd></div>
+      <div><dt data-i18n="roWt"></dt><dd><span id="roWt">0</span><small>g</small></dd></div>
+    </dl>
+  </section>
+
+  <div class="cols">
+    <form id="calc" class="panel" autocomplete="off" onsubmit="return false">
+      <fieldset class="grp">
+        <legend data-i18n="gProduct"></legend>
+        <div class="row r3">
+          <label class="fld" for="L"><span class="lbl" data-i18n="fL"></span><span class="ctl"><input id="L" type="number" inputmode="decimal" min="0" step="any" value="200"><em>mm</em></span></label>
+          <label class="fld" for="W"><span class="lbl" data-i18n="fW"></span><span class="ctl"><input id="W" type="number" inputmode="decimal" min="0" step="any" value="100"><em>mm</em></span></label>
+          <label class="fld" for="H"><span class="lbl" data-i18n="fH"></span><span class="ctl"><input id="H" type="number" inputmode="decimal" min="0" step="any" value="50"><em>mm</em></span></label>
+        </div>
+        <span class="hint" data-i18n="hProduct"></span>
+      </fieldset>
+
+      <fieldset class="grp">
+        <legend data-i18n="gSeal"></legend>
+        <div class="row r3">
+          <label class="fld" for="bs"><span class="lbl" data-i18n="fBS"></span><span class="ctl"><input id="bs" type="number" inputmode="decimal" min="0" step="any" value="15"><em>mm</em></span></label>
+          <label class="fld" for="es"><span class="lbl" data-i18n="fES"></span><span class="ctl"><input id="es" type="number" inputmode="decimal" min="0" step="any" value="15"><em>mm</em></span></label>
+          <label class="fld" for="fwo"><span class="lbl" data-i18n="fFWO"></span><span class="ctl"><input id="fwo" type="number" inputmode="decimal" min="0" step="any" placeholder="—"><em>mm</em></span></label>
+        </div>
+        <span class="hint" data-i18n="hSeal"></span>
+      </fieldset>
+
+      <fieldset class="grp">
+        <legend data-i18n="gVol"></legend>
+        <div class="row r3">
+          <label class="fld" for="vol"><span class="lbl" data-i18n="fVol"></span><span class="ctl"><input id="vol" type="number" inputmode="numeric" min="0" step="any" value="20000"><em data-i18n="uPack"></em></span></label>
+          <label class="fld" for="waste"><span class="lbl" data-i18n="fWaste"></span><span class="ctl"><input id="waste" type="number" inputmode="decimal" min="0" step="any" value="4"><em>%</em></span></label>
+          <label class="fld" for="roll"><span class="lbl" data-i18n="fRoll"></span><span class="ctl"><input id="roll" type="number" inputmode="decimal" min="0" step="any" value="10"><em>kg</em></span></label>
+        </div>
+      </fieldset>
+
+      <fieldset class="grp">
+        <legend data-i18n="gFilm"></legend>
+        <div class="films">
+          <div class="film">
+            <h3><span>A</span><b data-i18n="filmA"></b></h3>
+            <label class="fld" for="matA"><span class="lbl" data-i18n="fMat"></span><span class="ctl"><select id="matA"><option value="opp">OPP / PP</option><option value="cpp">CPP</option><option value="pe">PE</option><option value="pet">PET</option><option value="custom" data-i18n="optCustom"></option></select></span></label>
+            <label class="fld" for="thA" id="wthA"><span class="lbl" data-i18n="fTh"></span><span class="ctl"><input id="thA" type="number" inputmode="decimal" min="0" step="any" value="30"><em>μm</em></span></label>
+            <label class="fld" for="gsmA" id="wgsmA" hidden><span class="lbl" data-i18n="fGsm"></span><span class="ctl"><input id="gsmA" type="number" inputmode="decimal" min="0" step="any" value="30"><em>g/m²</em></span></label>
+            <label class="fld" for="prA"><span class="lbl" data-i18n="fPr"></span><span class="ctl"><input id="prA" type="number" inputmode="decimal" min="0" step="any" value="12"><em>RM/kg</em></span></label>
+          </div>
+          <div class="film">
+            <h3><span>B</span><b data-i18n="filmB"></b></h3>
+            <label class="fld" for="matB"><span class="lbl" data-i18n="fMat"></span><span class="ctl"><select id="matB"><option value="opp">OPP / PP</option><option value="cpp">CPP</option><option value="pe">PE</option><option value="pet">PET</option><option value="custom" data-i18n="optCustom"></option></select></span></label>
+            <label class="fld" for="thB" id="wthB"><span class="lbl" data-i18n="fTh"></span><span class="ctl"><input id="thB" type="number" inputmode="decimal" min="0" step="any" value="25"><em>μm</em></span></label>
+            <label class="fld" for="gsmB" id="wgsmB" hidden><span class="lbl" data-i18n="fGsm"></span><span class="ctl"><input id="gsmB" type="number" inputmode="decimal" min="0" step="any" value="25"><em>g/m²</em></span></label>
+            <label class="fld" for="prB"><span class="lbl" data-i18n="fPr"></span><span class="ctl"><input id="prB" type="number" inputmode="decimal" min="0" step="any" value="12.5"><em>RM/kg</em></span></label>
+          </div>
+        </div>
+        <span class="hint" data-i18n="hFilm"></span>
+      </fieldset>
+      <button type="button" class="reset" id="reset" data-i18n="reset"></button>
+    </form>
+
+    <aside class="panel results" aria-live="polite" aria-labelledby="resHead">
+      <div class="cap" id="resHead" data-i18n="gResult"></div>
+      <div class="duo">
+        <article class="res"><h3 data-i18n="filmAfull"></h3><p class="big"><span id="bigA">0</span><small data-i18n="senPer"></small></p><p class="sub" id="subA"></p></article>
+        <article class="res"><h3 data-i18n="filmBfull"></h3><p class="big"><span id="bigB">0</span><small data-i18n="senPer"></small></p><p class="sub" id="subB"></p></article>
+      </div>
+      <table class="tbl">
+        <thead><tr><th data-i18n="thItem"></th><th>A</th><th>B</th></tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+      <p class="verdict" id="verdict"></p>
+      <p class="note" data-i18n="noteCalc"></p>
+    </aside>
+  </div>
+
+  <section class="cta">
+    <div>
+      <h2 data-i18n="ctaT"></h2>
+      <p data-i18n="ctaP"></p>
+    </div>
+    <a class="btn" id="wa" href="#" target="_blank" rel="noopener">
+      <span data-i18n="ctaB"></span>
+      <svg width="18" height="12" viewBox="0 0 18 12" fill="none" aria-hidden="true"><path d="M0 6h16M11 1l5 5-5 5" stroke="currentColor" stroke-width="1.5"/></svg>
+    </a>
+  </section>
+
+  <footer class="foot">
+    <p data-i18n="foot1"></p>
+    <p data-i18n="foot2"></p>
+  </footer>
+</main>
+
+<script>
+(function () {
+  'use strict';
+  /* Replace with the number customers should message (country code, no + or spaces). */
+  var WHATSAPP = '60122081699';
+
+  var DENS = { opp: 0.91, cpp: 0.90, pe: 0.92, pet: 1.40 };
+
+  var I18N = {
+    zh: {
+      title: '枕式卷膜用量与成本计算器',
+      lead: '输入产品尺寸和膜的规格，马上算出每包要用多少膜、每包多少钱。同样一包东西，膜薄一点，每公斤贵一点，每包不一定更贵。',
+      svgT: '枕式包装机示意图', svgD: '膜卷经导辊进入成型器，卷成筒状，横封切断后成为一个个枕式包装。图中膜宽与包长随输入尺寸变化。',
+      mReel: '膜卷', mRoll: '导辊', mForm: '成型器', mTube: '成型管', mSeal: '横封·切断', mOut: '成品',
+      roFW: '膜宽', roLen: '每包用膜长度', roWt: '每包用膜量',
+      gProduct: '产品尺寸', fL: '长（沿走膜方向）', fW: '宽', fH: '高',
+      hProduct: '长度沿机器走膜方向；宽和高是产品的横截面。',
+      gSeal: '封口', fBS: '背封宽度', fES: '端封宽度（每端）', fFWO: '实际膜宽（可选）',
+      hSeal: '实际膜宽请填标准宽度（向上取整）；留空则按计算值。封口宽度请按客户机器的设置。',
+      gVol: '用量', fVol: '每月包装数量', uPack: '包', fWaste: '损耗率', fRoll: '每卷重量',
+      gFilm: '膜规格', filmA: '现用的膜', filmB: '想比较的膜', fMat: '材质', fTh: '厚度', fGsm: '克重', fPr: '价格',
+      optCustom: '复合膜（填克重）',
+      hFilm: '复合膜、镀铝膜请直接填克重（g/m²），不要用单一材质估算。价格为示例，请换成你的实际价格。',
+      reset: '恢复默认值',
+      gResult: '计算结果', filmAfull: '膜 A · 现用', filmBfull: '膜 B · 比较', senPer: '仙 / 包',
+      thItem: '项目',
+      rWt: '每包用膜 (g)', rK: '每 1,000 包成本 (RM)', rRoll: '每卷可包 (个)', rKg: '每月用膜 (kg)', rRolls: '每月用膜 (卷)', rMonth: '每月膜费用 (RM)',
+      vEq: '两种膜每月费用相近。', vB: function (rm, pct) { return '膜 B 每月可省 <b>RM ' + rm + '</b>（' + pct + '%）'; },
+      vA: function (rm, pct) { return '膜 A 每月更省 <b>RM ' + rm + '</b>（' + pct + '%）'; },
+      noteCalc: '每包成本不含损耗；每月数据含损耗。膜宽 ≈ 2 ×（宽 + 高）+ 背封，每包用膜长度 ≈ 长 + 2 × 端封。',
+      ctaT: '想要正式报价？', ctaP: '把这份计算发给我们，我们会按你的机器和规格报价，也可以安排样品。', ctaB: '通过 WhatsApp 询价',
+      foot1: '以上为估算，价格为示例，不构成报价。实际膜宽请向上取整到标准宽度，厚度公差和接头会影响实际用量。',
+      foot2: 'Midecs 关联 · 枕式卷膜、自立袋、拉链袋、蒸煮袋、面包袋，可定制。',
+      waMsg: function (d) {
+        return '您好，我想询价枕式包装卷膜。\n' +
+          '产品尺寸：长 ' + d.L + ' × 宽 ' + d.W + ' × 高 ' + d.H + ' mm\n' +
+          '膜宽（计算）：' + d.fw + ' mm；每包用膜长度：' + d.len + ' mm\n' +
+          '每月用量：' + d.vol + ' 包\n' +
+          '膜 A：' + d.a + '\n膜 B：' + d.b + '\n请问可以报价吗？';
+      },
+      waFilm: function (m, c) { return m + '，每包 ' + c + ' 仙'; }
+    },
+    en: {
+      title: 'Pillow-Pack Film Usage & Cost Calculator',
+      lead: 'Enter your product size and film specs to see how much film each pack uses and what it costs. A thinner film may cost more per kilo, yet less per pack.',
+      svgT: 'Flow-wrap machine schematic', svgD: 'Film leaves the reel, passes the rollers into the former, folds into a tube, then is end-sealed and cut into pillow packs. Film width and pack length follow your inputs.',
+      mReel: 'REEL', mRoll: 'ROLLERS', mForm: 'FORMER', mTube: 'TUBE', mSeal: 'SEAL · CUT', mOut: 'OUTPUT',
+      roFW: 'Film width', roLen: 'Film length per pack', roWt: 'Film weight per pack',
+      gProduct: 'Product size', fL: 'Length (along travel)', fW: 'Width', fH: 'Height',
+      hProduct: 'Length runs along the film travel; width and height are the product cross-section.',
+      gSeal: 'Seals', fBS: 'Back seal', fES: 'End seal (each end)', fFWO: 'Actual film width (optional)',
+      hSeal: 'Enter the standard film width, rounded up, if you know it; leave blank to use the calculated width. Seal widths follow the customer’s machine settings.',
+      gVol: 'Volume', fVol: 'Packs per month', uPack: 'pcs', fWaste: 'Waste', fRoll: 'Roll weight',
+      gFilm: 'Film spec', filmA: 'Current film', filmB: 'Film to compare', fMat: 'Material', fTh: 'Thickness', fGsm: 'Weight', fPr: 'Price',
+      optCustom: 'Laminate (enter g/m²)',
+      hFilm: 'For laminates and metallised films enter the actual g/m²; do not estimate from a single material. Prices are examples. Replace them with yours.',
+      reset: 'Reset to defaults',
+      gResult: 'Result', filmAfull: 'Film A · current', filmBfull: 'Film B · compare', senPer: 'sen / pack',
+      thItem: 'Item',
+      rWt: 'Film per pack (g)', rK: 'Cost per 1,000 packs (RM)', rRoll: 'Packs per roll', rKg: 'Film per month (kg)', rRolls: 'Film per month (rolls)', rMonth: 'Film cost per month (RM)',
+      vEq: 'Both films cost about the same per month.', vB: function (rm, pct) { return 'Film B saves <b>RM ' + rm + '</b> a month (' + pct + '%)'; },
+      vA: function (rm, pct) { return 'Film A saves <b>RM ' + rm + '</b> a month (' + pct + '%)'; },
+      noteCalc: 'Cost per pack excludes waste; monthly figures include it. Film width ≈ 2 × (width + height) + back seal; film length per pack ≈ length + 2 × end seal.',
+      ctaT: 'Want a formal quote?', ctaP: 'Send us this calculation. We will quote for your machine and spec, and can arrange samples.', ctaB: 'Request a quote on WhatsApp',
+      foot1: 'Estimates only. Prices shown are examples, not a quotation. Round film width up to a standard width; thickness tolerance and splices affect real usage.',
+      foot2: 'Midecs affiliate · Pillow-pack film rolls, stand-up, zip-lock, retort and bread pouches, custom printing available.',
+      waMsg: function (d) {
+        return 'Hello, I would like a quote for flow-wrap film.\n' +
+          'Product: L ' + d.L + ' × W ' + d.W + ' × H ' + d.H + ' mm\n' +
+          'Film width (calc): ' + d.fw + ' mm; film length per pack: ' + d.len + ' mm\n' +
+          'Volume: ' + d.vol + ' packs / month\n' +
+          'Film A: ' + d.a + '\nFilm B: ' + d.b + '\nCould you quote please?';
+      },
+      waFilm: function (m, c) { return m + ', ' + c + ' sen per pack'; }
+    }
+  };
+
+  var lang = 'zh';
+  try { var sv = localStorage.getItem('fc-lang'); if (sv === 'en' || sv === 'zh') lang = sv; } catch (e) {}
+  var T = function (k) { return I18N[lang][k]; };
+
+  var $ = function (id) { return document.getElementById(id); };
+  var num = function (id) { var v = parseFloat($(id).value); return isFinite(v) && v > 0 ? v : 0; };
+  var nf = function (n, d) { return (isFinite(n) ? n : 0).toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d }); };
+
+  /* ---------- calculation ---------- */
+  function compute() {
+    var L = num('L'), W = num('W'), H = num('H'), bs = num('bs'), es = num('es'), fwo = num('fwo');
+    var fw = fwo > 0 ? fwo : 2 * (W + H) + bs;
+    var len = L + 2 * es;
+    var area = (fw / 1000) * (len / 1000);
+    var vol = num('vol'), waste = num('waste') / 100, roll = num('roll');
+    var films = ['A', 'B'].map(function (k) {
+      var mat = $('mat' + k).value;
+      var gsm = mat === 'custom' ? num('gsm' + k) : num('th' + k) * DENS[mat];
+      var price = num('pr' + k);
+      var g = area * gsm;
+      var cost = (g / 1000) * price;
+      var eff = g * (1 + waste);
+      var kg = (vol * eff) / 1000;
+      return { mat: mat, th: num('th' + k), gsm: gsm, price: price, g: g, cost: cost,
+        per1000: cost * 1000, perRoll: eff > 0 ? (roll * 1000) / eff : 0, kg: kg, rolls: roll > 0 ? kg / roll : 0, month: kg * price };
+    });
+    return { L: L, W: W, H: H, bs: bs, es: es, fw: fw, len: len, vol: vol, films: films };
+  }
+
+  function filmLabel(f) {
+    var m = { opp: 'OPP', cpp: 'CPP', pe: 'PE', pet: 'PET', custom: lang === 'zh' ? '复合膜' : 'Laminate' }[f.mat];
+    var spec = f.mat === 'custom' ? nf(f.gsm, 1) + ' g/m²' : nf(f.th, 0) + 'μm';
+    return m + ' ' + spec + ' · RM' + nf(f.price, 2) + '/kg';
+  }
+
+  /* ---------- results ---------- */
+  var ROWS = [
+    ['rWt', function (f) { return nf(f.g, 2); }],
+    ['rK', function (f) { return nf(f.per1000, 2); }],
+    ['rRoll', function (f) { return nf(f.perRoll, 0); }],
+    ['rKg', function (f) { return nf(f.kg, 1); }],
+    ['rRolls', function (f) { return nf(f.rolls, 1); }],
+    ['rMonth', function (f) { return nf(f.month, 0); }]
+  ];
+
+  function renderResults(c) {
+    var A = c.films[0], B = c.films[1];
+    $('bigA').textContent = nf(A.cost * 100, 2);
+    $('bigB').textContent = nf(B.cost * 100, 2);
+    $('subA').textContent = 'RM ' + A.cost.toFixed(4);
+    $('subB').textContent = 'RM ' + B.cost.toFixed(4);
+    $('rows').innerHTML = ROWS.map(function (r) {
+      return '<tr><td>' + T(r[0]) + '</td><td class="num">' + r[1](A) + '</td><td class="num">' + r[1](B) + '</td></tr>';
+    }).join('');
+    var diff = A.month - B.month;
+    var pct = A.month > 0 ? Math.abs(diff) / A.month * 100 : (B.month > 0 ? Math.abs(diff) / B.month * 100 : 0);
+    var v = $('verdict');
+    if (Math.abs(diff) < 0.5) v.textContent = T('vEq');
+    else if (diff > 0) v.innerHTML = T('vB')(nf(diff, 0), nf(pct, 0));
+    else v.innerHTML = T('vA')(nf(-diff, 0), nf(pct, 0));
+    $('roFW').textContent = nf(c.fw, 0);
+    $('roLen').textContent = nf(c.len, 0);
+    $('roWt').textContent = nf(A.g, 2);
+    var msg = T('waMsg')({
+      L: nf(c.L, 0), W: nf(c.W, 0), H: nf(c.H, 0), fw: nf(c.fw, 0), len: nf(c.len, 0), vol: nf(c.vol, 0),
+      a: T('waFilm')(filmLabel(A), nf(A.cost * 100, 2)), b: T('waFilm')(filmLabel(B), nf(B.cost * 100, 2))
+    });
+    $('wa').href = 'https://wa.me/' + WHATSAPP + '?text=' + encodeURIComponent(msg);
+  }
+
+  /* ---------- machine drawing ---------- */
+  var NS = 'http://www.w3.org/2000/svg';
+  var CY = 118, SEALX = 585, TUBEX = 430;
+  var G = { s: 0.4, P: 100, hW: 100, tubeH: 40, gy: [0, 0] };
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var u = 0, spin = 0;
+  var SPEED = 34;
+
+  function setA(el, o) { for (var k in o) el.setAttribute(k, o[k]); }
+  function gearPath(ro, ri, n) {
+    var d = '', st = 2 * Math.PI / n;
+    for (var k = 0; k < n; k++) {
+      var a = k * st, pts = [[ri, a], [ro, a + .14 * st], [ro, a + .42 * st], [ri, a + .56 * st]];
+      for (var j = 0; j < 4; j++) d += (k === 0 && j === 0 ? 'M' : 'L') + (pts[j][0] * Math.cos(pts[j][1])).toFixed(2) + ' ' + (pts[j][0] * Math.sin(pts[j][1])).toFixed(2) + ' ';
+    }
+    return d + 'Z';
+  }
+  function packPath(x, Lb, ep, h) {
+    var y0 = CY - 0.39 * h, y1 = CY + 0.39 * h, c0 = CY - 0.58 * h, c1 = CY + 0.58 * h;
+    var xa = x + ep, xb = x + ep + Lb, xe = x + 2 * ep + Lb;
+    return 'M' + x + ' ' + y0 + ' L' + xa + ' ' + y0 +
+      ' C' + (xa + .25 * Lb) + ' ' + c0 + ' ' + (xa + .75 * Lb) + ' ' + c0 + ' ' + xb + ' ' + y0 +
+      ' L' + xe + ' ' + y0 + ' L' + xe + ' ' + y1 + ' L' + xb + ' ' + y1 +
+      ' C' + (xa + .75 * Lb) + ' ' + c1 + ' ' + (xa + .25 * Lb) + ' ' + c1 + ' ' + xa + ' ' + y1 +
+      ' L' + x + ' ' + y1 + ' Z';
+  }
+
+  var stripesG = $('stripes'), STRIPES = [];
+  for (var i = 0; i < 8; i++) {
+    var ln = document.createElementNS(NS, 'line');
+    ln.setAttribute('class', 'thin');
+    stripesG.appendChild(ln); STRIPES.push(ln);
+  }
+  var gearD = gearPath(20, 16, 10);
+  $('gearT').firstElementChild.setAttribute('d', gearD);
+  $('gearB').firstElementChild.setAttribute('d', gearD);
+
+  function layoutMachine(c) {
+    var fw = Math.max(c.fw, 20), len = Math.max(c.len, 20);
+    var s = Math.min(140 / fw, 130 / len, 0.7);
+    var hW = fw * s;
+    var tubeH = Math.min(Math.max((c.W + c.H) * s, 22), hW * 0.9);
+    var top = CY - hW / 2, bot = CY + hW / 2;
+    G.s = s; G.hW = hW; G.tubeH = tubeH;
+
+    setA($('reelBody'), { d: 'M40 ' + top + ' L40 ' + bot + ' A28 5 0 0 0 96 ' + bot + ' L96 ' + top + ' Z' });
+    setA($('reelTop'), { cy: top });
+    STRIPES.forEach(function (ln) { setA(ln, { y1: top + 5, y2: bot + 2 }); });
+    setA($('spT'), { y1: top - 16, y2: top - 5 });
+    setA($('spB'), { y1: bot + 5, y2: bot + 16 });
+    setA($('web'), { y: top, height: hW });
+    setA($('d1'), { y1: CY - hW * .25, y2: CY - hW * .25 });
+    setA($('d2'), { y1: CY + hW * .25, y2: CY + hW * .25 });
+    setA($('i1'), { y: top - 8, height: hW + 16 });
+    setA($('i2'), { y: top - 8, height: hW + 16 });
+    setA($('former'), { points: '330,' + top + ' ' + TUBEX + ',' + (CY - tubeH / 2) + ' ' + TUBEX + ',' + (CY + tubeH / 2) + ' 330,' + bot });
+    [[-.25, 'f1'], [0, 'f2'], [.25, 'f3']].forEach(function (p) {
+      setA($(p[1]), { x1: 330, y1: CY + p[0] * hW, x2: TUBEX, y2: CY + p[0] * tubeH });
+    });
+    setA($('tube'), { y: CY - tubeH / 2, height: tubeH });
+    setA($('jaw'), { y: CY - tubeH / 2 - 4, height: tubeH + 8 });
+    setA($('cut'), { y1: CY - tubeH / 2 - 14, y2: CY + tubeH / 2 + 14 });
+    G.gy = [CY - tubeH / 2 - 15, CY + tubeH / 2 + 15];
+
+    // dimensions
+    var dx = 304;
+    setA($('dvL'), { x1: dx, x2: dx, y1: top, y2: bot });
+    setA($('dvT'), { x1: dx - 4, x2: dx + 4, y1: top, y2: top });
+    setA($('dvB'), { x1: dx - 4, x2: dx + 4, y1: bot, y2: bot });
+    var dv = $('dvX'); dv.textContent = nf(c.fw, 0) + ' mm';
+    setA(dv, { x: dx - 8, y: CY, transform: 'rotate(-90 ' + (dx - 8) + ' ' + CY + ')' });
+    var lx0 = 612, lx1 = 612 + len * s, dy = CY + tubeH * 0.62 + 30;
+    setA($('dhL'), { x1: lx0, x2: lx1, y1: dy, y2: dy });
+    setA($('dhA'), { x1: lx0, x2: lx0, y1: dy - 4, y2: dy + 4 });
+    setA($('dhB'), { x1: lx1, x2: lx1, y1: dy - 4, y2: dy + 4 });
+    var dh = $('dhX'); dh.textContent = nf(c.len, 0) + ' mm';
+    setA(dh, { x: (lx0 + lx1) / 2, y: dy + 17 });
+
+    // packs and products
+    var Lb = Math.max(c.L * s, 8), ep = Math.max(c.es * s, 3), gap = 8;
+    var P = Lb + 2 * ep + gap; G.P = P;
+    var n = Math.ceil((900 - TUBEX) / P) + 2, ph = Math.min(Math.max(c.W * s, 8), tubeH - 8);
+    var packs = '', prods = '';
+    for (var i = 0; i < n; i++) {
+      var x = TUBEX - P + i * P;
+      packs += '<path class="solid" style="fill:var(--film)" d="' + packPath(x, Lb, ep, tubeH) + '"/>' +
+        '<rect x="' + x + '" y="' + (CY - tubeH * .39) + '" width="' + ep + '" height="' + (tubeH * .78) + '" fill="url(#crimp)"/>' +
+        '<rect x="' + (x + ep + Lb) + '" y="' + (CY - tubeH * .39) + '" width="' + ep + '" height="' + (tubeH * .78) + '" fill="url(#crimp)"/>';
+      prods += '<rect class="ghost" x="' + (x + ep) + '" y="' + (CY - ph / 2) + '" width="' + Lb + '" height="' + ph + '" rx="2"/>';
+    }
+    $('packInner').innerHTML = packs;
+    $('prodInner').innerHTML = prods;
+
+    // ruler (true to the drawing scale)
+    var step = 100; while (step * s < 38) step *= 5;
+    var minor = step / 5, r = '', X0 = 40, YB = 228;
+    r += '<line class="ln" x1="' + X0 + '" x2="880" y1="' + YB + '" y2="' + YB + '"/>';
+    for (var mm = 0; X0 + mm * s <= 880; mm += minor) {
+      var xx = X0 + mm * s, major = (Math.round(mm / minor) % 5 === 0);
+      r += '<line class="thin" x1="' + xx + '" x2="' + xx + '" y1="' + YB + '" y2="' + (YB + (major ? 8 : 4)) + '"/>';
+      if (major) r += '<text x="' + xx + '" y="' + (YB + 22) + '" text-anchor="middle">' + mm + '</text>';
+    }
+    r += '<text x="880" y="' + (YB - 6) + '" text-anchor="end">mm</text>';
+    $('ruler').innerHTML = r;
+  }
+
+  function draw() {
+    var off = u % G.P;
+    var t = 'translate(' + off.toFixed(2) + ' 0)';
+    $('packInner').setAttribute('transform', t);
+    $('prodInner').setAttribute('transform', t);
+    var dash = (-u).toFixed(2);
+    ['d1', 'd2', 'f1', 'f2', 'f3'].forEach(function (id) { $(id).style.strokeDashoffset = dash; });
+    for (var k = 0; k < STRIPES.length; k++) {
+      var a = spin + k * Math.PI / 4, cs = Math.cos(a);
+      var x = 68 + 26 * Math.sin(a);
+      setA(STRIPES[k], { x1: x.toFixed(2), x2: x.toFixed(2), 'stroke-opacity': cs > 0 ? (0.25 + 0.6 * cs).toFixed(2) : 0 });
+    }
+    var ang = (u / 17) * 180 / Math.PI;
+    $('gearT').setAttribute('transform', 'translate(' + SEALX + ' ' + G.gy[0] + ') rotate(' + ang.toFixed(1) + ')');
+    $('gearB').setAttribute('transform', 'translate(' + SEALX + ' ' + G.gy[1] + ') rotate(' + (-ang).toFixed(1) + ')');
+  }
+
+  var last = 0, running = false;
+  function frame(ts) {
+    if (!last) last = ts;
+    var dt = Math.min(ts - last, 50) / 1000; last = ts;
+    u += dt * SPEED; spin += dt * 0.9;
+    draw();
+    requestAnimationFrame(frame);
+  }
+  function start() {
+    draw();
+    if (!reduce && !running) { running = true; requestAnimationFrame(frame); }
+  }
+
+  /* ---------- language ---------- */
+  function applyLang() {
+    document.documentElement.lang = lang === 'zh' ? 'zh-Hans' : 'en';
+    var els = document.querySelectorAll('[data-i18n]');
+    for (var i = 0; i < els.length; i++) els[i].textContent = T(els[i].getAttribute('data-i18n'));
+    var ls = document.querySelectorAll('[data-k]');
+    for (var j = 0; j < ls.length; j++) ls[j].textContent = T(ls[j].getAttribute('data-k'));
+    $('mTitle').textContent = T('svgT');
+    $('mDesc').textContent = T('svgD');
+    var bs = document.querySelectorAll('.lang button');
+    for (var b = 0; b < bs.length; b++) bs[b].setAttribute('aria-pressed', bs[b].getAttribute('data-lang') === lang ? 'true' : 'false');
+  }
+
+  /* ---------- wiring ---------- */
+  var DEFAULTS = {};
+  var fields = document.querySelectorAll('#calc input, #calc select');
+  for (var f = 0; f < fields.length; f++) DEFAULTS[fields[f].id] = fields[f].value;
+
+  function toggleCustom() {
+    ['A', 'B'].forEach(function (k) {
+      var custom = $('mat' + k).value === 'custom';
+      $('wth' + k).hidden = custom;
+      $('wgsm' + k).hidden = !custom;
+    });
+  }
+  function update() {
+    toggleCustom();
+    var c = compute();
+    layoutMachine(c);
+    renderResults(c);
+    if (reduce) draw();
+  }
+
+  document.getElementById('calc').addEventListener('input', update);
+  document.getElementById('calc').addEventListener('change', update);
+  $('reset').addEventListener('click', function () {
+    for (var id in DEFAULTS) $(id).value = DEFAULTS[id];
+    update();
+  });
+  var lb = document.querySelectorAll('.lang button');
+  for (var q = 0; q < lb.length; q++) lb[q].addEventListener('click', function () {
+    lang = this.getAttribute('data-lang');
+    try { localStorage.setItem('fc-lang', lang); } catch (e) {}
+    applyLang(); update();
+  });
+
+  applyLang();
+  update();
+  start();
+})();
+</script>
